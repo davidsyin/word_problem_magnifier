@@ -1,0 +1,85 @@
+sudo wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcusparse-dev-11-3_11.5.0.58-1_amd64.deb -O /tmp/libcusparse-dev-11-3_11.5.0.58-1_amd64.deb && \
+sudo wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcublas-dev-11-3_11.5.1.109-1_amd64.deb -O /tmp/libcublas-dev-11-3_11.5.1.109-1_amd64.deb && \
+sudo wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcusolver-dev-11-3_11.1.2.109-1_amd64.deb -O /tmp/libcusolver-dev-11-3_11.1.2.109-1_amd64.deb && \
+sudo wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcurand-dev-11-3_10.2.4.109-1_amd64.deb -O /tmp/libcurand-dev-11-3_10.2.4.109-1_amd64.deb && \
+sudo dpkg -i /tmp/libcusparse-dev-11-3_11.5.0.58-1_amd64.deb && \
+sudo dpkg -i /tmp/libcublas-dev-11-3_11.5.1.109-1_amd64.deb && \
+sudo dpkg -i /tmp/libcusolver-dev-11-3_11.1.2.109-1_amd64.deb && \
+sudo dpkg -i /tmp/libcurand-dev-11-3_10.2.4.109-1_amd64.deb #requirements
+
+!pip install -r requirements.txt #requirements
+
+# COMMAND ----------
+import os
+from transformers import LlamaTokenizer
+
+timestamp = ""
+
+model_path = "/home/mcwave/models/pythia_models/arithmetic/checkpoint-4950-0711"#put model path here
+
+experiment_id = ""
+input_model = model_path
+
+if experiment_id:
+    experiment_id = re.sub(r"\s+", "_", experiment_id.strip())
+    model_name = f"{model_name}__{experiment_id}"
+
+checkpoint_dir_name = "model"
+
+root_path = os.getcwd()
+deepspeed_config = os.path.join(root_path, "config/dolly_config.json")
+
+dolly_training_dir_name = "dolly_training"
+
+local_training_root = model_path
+
+dbfs_output_root = "/home/mcwave/code/results"#model will save both here and in the model folder
+if not dbfs_output_root:
+    dbfs_output_root = f"/dbfs/{dolly_training_dir_name}"
+
+os.makedirs(local_training_root, exist_ok=True)
+os.makedirs(dbfs_output_root, exist_ok=True)
+
+local_output_dir = os.path.join(local_training_root, "")
+dbfs_output_dir = os.path.join(dbfs_output_root, checkpoint_dir_name)
+
+num_gpus_flag = ""
+num_gpus = "2"
+if num_gpus:
+    num_gpus = int(num_gpus)
+    num_gpus_flag = f"--num_gpus={num_gpus}"
+model_flag=f"{model_path}"
+
+tensorboard_display_dir = f"{local_output_dir}/runs"
+
+print(f"Local Output Dir: {local_output_dir}")
+print(f"DBFS Output Dir: {dbfs_output_dir}")
+print(f"Tensorboard Display Dir: {tensorboard_display_dir}")
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+# COMMAND ----------
+
+# MAGIC %load_ext tensorboard
+# MAGIC %tensorboard --logdir '{tensorboard_display_dir}'
+
+# COMMAND ----------
+
+!deepspeed {num_gpus_flag}\
+     --module training.trainer \
+     --input-model {input_model} \
+     --deepspeed {deepspeed_config} \
+     --epochs 50 \
+     --local-output-dir {local_output_dir} \
+     --dbfs-output-dir {dbfs_output_dir} \
+     --per-device-train-batch-size 5 \
+     --per-device-eval-batch-size 5 \
+     --logging-steps 10 \
+     --save-steps 100 \
+     --save-total-limit 9999 \
+     --eval-steps 50 \
+     --warmup-steps 0 \
+     --test-size 200 \
+     --lr 5e-6 \
+
+# # COMMAND ----------

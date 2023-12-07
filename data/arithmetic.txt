@@ -1,0 +1,185 @@
+import math
+def space(a): #adds spaces between digits to avoid BPE
+    res=""
+    for i in range(len(a)):
+        res+=a[i]
+        if i!=len(a)-1:
+            res+=" "
+    return res
+def to_words_mult(a,b): #adds rationale for multiplication equations
+    res=a+" * "+b+" = "+space(a)+" * "+space(b)+" = "
+    for i in range(len(b)):
+        if i!=len(b)-1:
+            res+="< "
+        res+="[ "
+        for j in range(len(a)):
+            if j!=len(a)-1:
+                res+="{ "
+            if len(a)-j>1:
+                res+="( "+a[j]+" * "+b[i]+" = "+space(str(int(a[j])*int(b[i])))+" ) "
+                res+="shifted "+str(len(a)-j-1)
+                res+=" = "+space(str(int(a[j])*int(b[i])*10**(len(a)-j-1)))
+            else:
+                res+="( "+a[j]+" * "+b[i]+" = "+space(str(int(a[j])*int(b[i])))+" )"
+            if j!=len(a)-1:
+                res+=" }"
+            if j!=len(a)-1:
+                res+=" + "
+        res+=" = "+space(str(int(a)*int(b[i])))
+        res+=" ] "
+        if len(b)-i>1:
+            res+="shifted "+str(len(b)-i-1) 
+            res+=" = "+space(str(int(a)*int(b[i])*10**(len(b)-i-1)))
+            res+=" "
+        if i!=len(b)-1:
+            res+=">"
+        if i!=len(b)-1:
+            res+=" + "
+    res+="= "
+    nums=[]
+    for i in range(len(b)):
+        num=str(int(a)*int(b[i])*10**(len(b)-i-1))
+        for j in str(int(a)*int(b[i])*10**(len(b)-i-1)):
+            res+=j+" "
+        nums.append(num)
+        if i!=len(b)-1:
+            res+="+ "
+    sum=int(nums[0])
+    for i in range(1,len(nums)):
+        sum+=int(nums[i])
+        if i==len(nums)-1:
+            res+="= "
+            for j in str(int(a)*int(b)):
+                res+=j+" "
+            break
+        res+="= "
+        for j in str(sum):
+            res+=j+" "
+        if i<len(nums)-1:
+            res+="+ "
+            for j in range(i+1,len(nums)):
+                for k in nums[j]:
+                    res+=k+" "
+                if j!=len(nums)-1:
+                    res+="+ "
+    return res
+def to_words_div(a,b): #adds rationale for division equations
+    res=""
+    res+=a+" / "+b+" = "+space(a)+" / "+space(b)
+    res+=" ="
+    rem=int(a)
+    res+=" < "
+    res+="["
+    mid_reses=[]
+    first=True
+    prev_remainder=-1
+    while rem>=int(b):
+        digits=1
+        while(int(str(rem)[:digits])<int(b)):
+            digits+=1
+        mid_res=math.floor(int(str(rem)[:digits])/int(b))
+        res+=" { "
+        res+="( "
+        tmp=prev_remainder
+        prev_remainder=int(str(rem)[:digits])-mid_res*int(b)
+        if not first:
+            res+=space(str(tmp))+" shifted 1"+" + "+str(rem)[digits-1]+" = "
+        res+=space(str(rem)[:digits])+" / "+space(b)+" #"
+        res+=" because "+str(mid_res)+" * "+space(b)+" $ "+space(str(rem)[:digits])
+        res+=" |"
+        res+=" "+str(mid_res)+","
+        res+=" remainder "+"= "+space(str(rem)[:digits])+" - "+str(mid_res)+" * "+space(b)+" = "+space(str(rem)[:digits])+" - "+space(str(mid_res*int(b)))+" = "+space(str(prev_remainder))+" )"
+        if len(str(rem))-digits>0:
+            res+=" shifted "+str(len(str(rem))-digits)
+        res+=" = "+space(str(mid_res*10**(len(str(rem))-digits)))
+        mid_reses.append(mid_res*(10**(len(str(rem))-digits)))
+        rem-=int(b)*mid_res*(10**(len(str(rem))-digits))
+        res+=" }"
+        if rem>=int(b):
+            res+=" +"  
+        first=False
+    res+=" ]"
+    sum=0
+    for i in range(len(mid_reses)):
+        sum+=int(mid_reses[i])
+        res+=" = "
+        res+=space(str(sum))
+        if i!=len(mid_reses)-1:
+            res+=" + "
+        for j in range(i+1,len(mid_reses)):
+            res+=space(str(mid_reses[j]))
+            if j!=len(mid_reses)-1:
+                res+=" + "
+    res+=" >"
+    res+=" = "+space(str(int(int(a)/int(b))))+" remainder "+space(str(rem))
+    return res
+def to_words_add(a,b): #adds rationale for addition equations
+    res=""
+    res+=a+" + "+b+" = "
+    a_spaced=space(a)
+    b_spaced=space(b)
+    res+=a_spaced+" + "+b_spaced+" = "
+    res+=space(str(int(a)+int(b)))
+    return res
+def to_words_sub(a,b): #adds rationale for subtraction equations
+    res=""
+    res+=a+" - "+b+" = "
+    a_spaced=space(a)    
+    b_spaced=space(b)
+    res+=a_spaced+" - "+b_spaced+" = "
+    res+=space(str(int(a)-int(b)))
+    return res
+
+import random
+import json
+def make_data(path,n): #generates arithmetic data
+    for i in range(n):
+        operation=random.randint(1,4)
+        if str(operation) in "1":
+            digits_1=random.randint(3,4) #log-uniform distribution
+            digits_2=random.randint(3,4)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(10**(digits_2-1),(10**digits_2)-1)
+            instructions=str(a)+" * "+str(b)
+            response=to_words_mult(str(a),str(b))
+            question={"instruction":instructions, "context": "", "category": "open_qa", "response": response} #must be in this format
+            with open(path, "a") as outfile:
+                json.dump(question, outfile)
+                outfile.write("\n")
+        if str(operation) in "2":
+            digits_1=random.randint(3,4) #log-uniform distribution
+            digits_2=random.randint(2,digits_1)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(max(10**(digits_2-1),1),min((10**digits_2)-1,a))
+            instructions=str(a)+" / "+str(b)
+            response=to_words_div(str(a),str(b))
+            question={"instruction":instructions, "context": "", "category": "open_qa", "response": response}
+            with open(path, "a") as outfile:
+                json.dump(question, outfile)
+                outfile.write("\n")
+        if operation==3:
+            digits_1=random.randint(3,7) #log-uniform distribution
+            digits_2=random.randint(3,7)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            instructions=str(a)+" + "+str(b)
+            response=to_words_add(str(a),str(b))
+            question={"instruction":instructions, "context": "", "category": "open_qa", "response": response}
+            with open(path, "a") as outfile:
+                json.dump(question, outfile)
+                outfile.write("\n")
+        if operation==4:
+            digits_1=random.randint(3,7) #log-uniform distribution
+            digits_2=random.randint(2,digits_1)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(max(10**(digits_2-1),1),min((10**digits_2)-1,a))
+            instructions=str(a)+" - "+str(b)
+            response=to_words_sub(str(a),str(b))
+            question={"instruction":instructions, "context": "", "category": "open_qa", "response": response}
+            with open(path, "a") as outfile:
+                json.dump(question, outfile)
+                outfile.write("\n")
+
+data_size=400000 #size of arithmetic data
+data_path="" #location of data
+make_data(data_path,data_size)

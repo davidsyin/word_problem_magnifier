@@ -1,0 +1,395 @@
+import math
+def space(a): #adds spaces between digits to avoid BPE
+    res=""
+    for i in range(len(a)):
+        res+=a[i]
+        if i!=len(a)-1:
+            res+=" "
+    return res
+def to_words_mult(a,b): #adds rationale for multiplication equations
+    res=a+" * "+b+" = "+space(a)+" * "+space(b)+" = "
+    for i in range(len(b)):
+        if i!=len(b)-1:
+            res+="< "
+        res+="[ "
+        for j in range(len(a)):
+            if j!=len(a)-1:
+                res+="{ "
+            if len(a)-j>1:
+                res+="( "+a[j]+" * "+b[i]+" = "+space(str(int(a[j])*int(b[i])))+" ) "
+                res+="shifted "+str(len(a)-j-1)
+                res+=" = "+space(str(int(a[j])*int(b[i])*10**(len(a)-j-1)))
+            else:
+                res+="( "+a[j]+" * "+b[i]+" = "+space(str(int(a[j])*int(b[i])))+" )"
+            if j!=len(a)-1:
+                res+=" }"
+            if j!=len(a)-1:
+                res+=" + "
+        res+=" = "+space(str(int(a)*int(b[i])))
+        res+=" ] "
+        if len(b)-i>1:
+            res+="shifted "+str(len(b)-i-1) 
+            res+=" = "+space(str(int(a)*int(b[i])*10**(len(b)-i-1)))
+            res+=" "
+        if i!=len(b)-1:
+            res+=">"
+        if i!=len(b)-1:
+            res+=" + "
+    res+="= "
+    nums=[]
+    for i in range(len(b)):
+        num=str(int(a)*int(b[i])*10**(len(b)-i-1))
+        for j in str(int(a)*int(b[i])*10**(len(b)-i-1)):
+            res+=j+" "
+        nums.append(num)
+        if i!=len(b)-1:
+            res+="+ "
+    sum=int(nums[0])
+    for i in range(1,len(nums)):
+        sum+=int(nums[i])
+        if i==len(nums)-1:
+            res+="= "
+            for j in str(int(a)*int(b)):
+                res+=j+" "
+            break
+        res+="= "
+        for j in str(sum):
+            res+=j+" "
+        if i<len(nums)-1:
+            res+="+ "
+            for j in range(i+1,len(nums)):
+                for k in nums[j]:
+                    res+=k+" "
+                if j!=len(nums)-1:
+                    res+="+ "
+    return res
+def to_words_div(a,b): #adds rationale for division equations
+    res=""
+    res+=a+" / "+b+" = "+space(a)+" / "+space(b)
+    res+=" ="
+    rem=int(a)
+    res+=" < "
+    res+="["
+    mid_reses=[]
+    first=True
+    prev_remainder=-1
+    while rem>=int(b):
+        digits=1
+        while(int(str(rem)[:digits])<int(b)):
+            digits+=1
+        mid_res=math.floor(int(str(rem)[:digits])/int(b))
+        res+=" { "
+        res+="( "
+        tmp=prev_remainder
+        prev_remainder=int(str(rem)[:digits])-mid_res*int(b)
+        if not first:
+            res+=space(str(tmp))+" shifted 1"+" + "+str(rem)[digits-1]+" = "
+        res+=space(str(rem)[:digits])+" / "+space(b)+" #"
+        res+=" because "+str(mid_res)+" * "+space(b)+" $ "+space(str(rem)[:digits])
+        res+=" |"
+        res+=" "+str(mid_res)+","
+        res+=" remainder "+"= "+space(str(rem)[:digits])+" - "+str(mid_res)+" * "+space(b)+" = "+space(str(rem)[:digits])+" - "+space(str(mid_res*int(b)))+" = "+space(str(prev_remainder))+" )"
+        if len(str(rem))-digits>0:
+            res+=" shifted "+str(len(str(rem))-digits)
+        res+=" = "+space(str(mid_res*10**(len(str(rem))-digits)))
+        mid_reses.append(mid_res*(10**(len(str(rem))-digits)))
+        rem-=int(b)*mid_res*(10**(len(str(rem))-digits))
+        res+=" }"
+        if rem>=int(b):
+            res+=" +"  
+        first=False
+    res+=" ]"
+    sum=0
+    for i in range(len(mid_reses)):
+        sum+=int(mid_reses[i])
+        res+=" = "
+        res+=space(str(sum))
+        if i!=len(mid_reses)-1:
+            res+=" + "
+        for j in range(i+1,len(mid_reses)):
+            res+=space(str(mid_reses[j]))
+            if j!=len(mid_reses)-1:
+                res+=" + "
+    res+=" >"
+    res+=" = "+space(str(int(int(a)/int(b))))+" remainder "+space(str(rem))
+    return res
+def to_words_add(a,b): #adds rationale for addition equations
+    res=""
+    res+=a+" + "+b+" = "
+    a_spaced=space(a)
+    b_spaced=space(b)
+    res+=a_spaced+" + "+b_spaced+" = "
+    res+=space(str(int(a)+int(b)))
+    return res
+def to_words_sub(a,b): #adds rationale for subtraction equations
+    res=""
+    res+=a+" - "+b+" = "
+    a_spaced=space(a)    
+    b_spaced=space(b)
+    res+=a_spaced+" - "+b_spaced+" = "
+    res+=space(str(int(a)-int(b)))
+    return res
+
+import random
+import json
+def make_data(path,n): #generates arithmetic data
+    for i in range(n):
+        operation=random.randint(1,4)
+        if str(operation) in "1":
+            digits_1=random.randint(3,4) #log-uniform distribution
+            digits_2=random.randint(3,4)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(10**(digits_2-1),(10**digits_2)-1)
+            instructions=str(a)+" * "+str(b)
+            response=to_words_mult(str(a),str(b))
+            question={"instruction":instructions, "context": "", "category": "open_qa", "response": response} #must be in this format
+            with open(path, "a") as outfile:
+                json.dump(question, outfile)
+                outfile.write("\n")
+        if str(operation) in "2":
+            digits_1=random.randint(3,4) #log-uniform distribution
+            digits_2=random.randint(2,digits_1)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(max(10**(digits_2-1),1),min((10**digits_2)-1,a))
+            instructions=str(a)+" / "+str(b)
+            response=to_words_div(str(a),str(b))
+            question={"instruction":instructions, "context": "", "category": "open_qa", "response": response}
+            with open(path, "a") as outfile:
+                json.dump(question, outfile)
+                outfile.write("\n")
+        if operation==3:
+            digits_1=random.randint(3,7) #log-uniform distribution
+            digits_2=random.randint(3,7)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            instructions=str(a)+" + "+str(b)
+            response=to_words_add(str(a),str(b))
+            question={"instruction":instructions, "context": "", "category": "open_qa", "response": response}
+            with open(path, "a") as outfile:
+                json.dump(question, outfile)
+                outfile.write("\n")
+        if operation==4:
+            digits_1=random.randint(3,7) #log-uniform distribution
+            digits_2=random.randint(2,digits_1)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(max(10**(digits_2-1),1),min((10**digits_2)-1,a))
+            instructions=str(a)+" - "+str(b)
+            response=to_words_sub(str(a),str(b))
+            question={"instruction":instructions, "context": "", "category": "open_qa", "response": response}
+            with open(path, "a") as outfile:
+                json.dump(question, outfile)
+                outfile.write("\n")
+
+from csv import DictReader
+import random
+with open("word_problems/SVAMP/data/mawps-asdiv-a_svamp/dev.csv", 'r') as f:#loads data
+    dict_reader = DictReader(f)
+    list_of_dict = list(dict_reader)
+def solve(eq):#adds a rationale to the problem answers
+    if len(eq)==0:
+        return 
+    i=1
+    sign=eq[0]
+    res=0
+    first_num=""
+    second_num=""
+    while i<len(eq):
+        if i==2:
+            if eq[i] not in "0123456789.":
+                break
+            num=""
+            while i<len(eq) and eq[i] in "0123456789.":
+                num+=eq[i]
+                i+=1
+            if num=="." or num==" ":
+                continue
+            if len(num)>0:
+                if num[0]==" ":
+                    num=num[1:]
+                if num[-1]==" ":
+                    num=num[:-1]
+                first_num=num
+                continue
+        if len(first_num)>0 and eq[i] in "+-*/":
+            break
+        if len(first_num)>0:
+            try:
+                second_num=float(eq[i:])
+                second_num=str(second_num)
+                break
+            except:
+                break
+        i+=1
+    if first_num=="":
+        j=len(eq)-1
+        while eq[j]!=" ":
+            j-=1
+        if eq[i]==" ":
+            i+=1
+        first_num=solve(eq[i:j])
+        second_num=eq[j+1:]
+    if second_num=="":
+        if eq[i]==" ":
+            i+=1
+        second_num=solve(eq[i:])
+    nums1=[""]
+    sign1=""
+    for i in first_num:
+        if i in "0123456789":
+            nums1[-1]+=i
+        if i in "+-*/)=":
+            sign1=i
+            nums1[-1]=nums1[-1][:-1]
+            if len(nums1)==2:
+                break
+            nums1.append("")
+    nums1[-1]=nums1[-1][:-1]
+    nums2=[""]
+    sign2=""
+    for i in second_num:
+        if i in "0123456789":
+            nums2[-1]+=i
+        if i in "+-*/=)":
+            sign2=i
+            nums2[-1]=nums2[-1][:-1]
+            if len(nums2)==2:
+                break
+            nums2.append("")
+    nums2[-1]=nums2[-1][:-1]
+    n1=first_num
+    n2=second_num
+    if len(nums1)==2:
+        first_num=to_words(nums1[0],nums1[1],sign1)
+        n1=str(eval(nums1[0]+sign1+nums1[1]))
+    if len(nums2)==2:
+        second_num=to_words(nums2[0],nums2[1],sign2)
+        n2=str(eval(nums2[0]+sign2+nums2[1]))
+    if n1[-2:]==".0":
+        n1=n1[:-2]
+    if n2[-2:]==".0":
+        n2=n2[:-2]
+    res="( "+first_num+" "+sign+" "+second_num+" ) = "+to_words(n1,n2,sign)
+    return res
+import json
+def get_numdict(i,mult,is_mult):#magnifies all numbers
+    num_dict={}
+    j=0
+    id=0
+    while j<len(i["Numbers"]):
+        num=""
+        res=""
+        while j<len(i["Numbers"]) and i["Numbers"][j] in "0123456789.":
+            num+=i["Numbers"][j]
+            j+=1
+        num=float(num)
+        if is_mult:
+            if math.ceil(num*mult)>9999:
+                x=math.ceil(num*mult)
+                j=0
+                while x>9999:#caps values
+                    if j>10:
+                        print(1/0)
+                    j+=1
+                    mult=math.ceil(mult/2)
+                    x=math.ceil(num*mult)
+                #print(math.ceil(x))
+                res=str(math.ceil(x))
+            else:
+                #print(math.ceil(float(num_dict[q[i:i+7]])*mult))
+                res=str(math.ceil(num*mult))
+        else:
+            if math.ceil(num*mult)>9999999:#caps values
+                x=math.ceil(num*mult)
+                j=0
+                while x>9999:
+                    if j>10:
+                        print(1/0)
+                    j+=1
+                    mult=math.ceil(mult/2)
+                    x=math.ceil(num*mult)
+                res=str(math.ceil(x))
+            else:
+                res=str(math.ceil(num*mult))
+        num_dict["number"+str(id)]=res
+        id+=1
+        j+=1
+    return num_dict
+def map_numbers(num_dict,q):#maps the variable constants in the dataset to the default values
+    i=0
+    res_q=""
+    while i<len(q):
+        if i<len(q)-6 and q[i:i+6]=="number":
+            res_q+=str(num_dict[q[i:i+7]])
+            i+=6
+        else:
+            res_q+=q[i]
+        i+=1
+    return res_q
+def process(q,a):#removes irrelevant information
+    a_nums={123456789}
+    i=0
+    while i<len(a):
+        num=""
+        while i<len(a) and a[i] in "0123456789.":
+            num+=a[i]
+            i+=1
+        if num!="" and num!=".":
+            a_nums.add(float(num))
+            continue
+        i+=1
+    print(a_nums)
+    new_q=""
+    i=0
+    while i<len(q):
+        num=""
+        while i<len(q) and q[i] in "0123456789.":
+            num+=q[i]
+            i+=1
+        if num!="" and num!=".":
+            if float(num) not in a_nums:
+                new_q+="some"
+            else:
+                new_q+=num
+            continue
+        if num==".":
+            new_q+="."
+            continue
+        new_q+=q[i]
+        i+=1
+    return new_q
+
+seen={"temp"}
+
+repeated=0
+errors=0
+it=0
+random.seed(42)
+output_dir=""
+for i in list_of_dict:#writes data into a file
+    try:
+        if i["Question"] in seen:
+            repeated+=1
+        else:
+            seen.add(i["Question"])
+            mult=random.randint(1000,10000)#change how much to multiply values by
+            is_mult=False
+            if "*" in i["Equation"] or "/" in i["Equation"]:
+                is_mult=True
+            num_dict=get_numdict(i,mult,is_mult)
+            eq=solve(map_numbers(num_dict,i["Equation"]))
+            j=len(eq)-1
+            while eq[j]!="=":
+                if eq[j]=="-":
+                    x=1/0
+                j-=1
+            res_dict={"instruction":map_numbers(num_dict,i["Question"]),"context":"","category":"open_qa","answer":eq}
+            with open(output_dir,"a") as outfile:
+                json.dump(res_dict,outfile)
+                outfile.write("\n")
+            it+=1
+    except:
+        it+=1
+        errors+=1
+print("Total",it)
+print("Errors",errors)
+print("Repeated",repeated)

@@ -1,0 +1,37 @@
+import json
+eval_set=""
+f=open(eval_set)
+data=json.load(f) #loads eval data
+
+import os
+paths=os.listdir("/home/mcwave/models/pythia_models/pythia-6.9b-wordproblems-orig2") #load all checkpoint paths
+
+for path in paths:
+    if "checkpoint-" not in path:
+        continue
+    model,tokenizer=load_model_tokenizer_for_generate(os.path.join("",path)) #put model folder path in empty string
+    i=0
+    it=0
+    correct=0
+    incorrect=0
+    while it<325:
+        try: #in cse of errors
+            q=data[i]["instruction"]
+            a=data[i]["response"]
+            response=generate_response(q,model=model,tokenizer=tokenizer)
+            if a==response:
+                correct+=1
+            else:
+                incorrect+=1
+            i+=1
+            it+=1
+            if i%10==0: #prints results every 10 examples
+                print(i)
+                print("Correct",correct)
+                print("Incorrect",incorrect)
+        except:
+            print("Error")
+            it+=1
+    print("Model",path)
+    print("Correct",correct)
+    print("Incorrect",incorrect)

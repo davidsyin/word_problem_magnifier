@@ -1,0 +1,89 @@
+import random #evaluation set for arithmetic operations
+random.seed(42)
+def get_eval_set(x):
+    res=[]
+    for i in range(x):
+        operation=random.randint(1,4)
+        if str(operation) in "1":
+            digits_1=random.randint(2,4)
+            digits_2=random.randint(2,4)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(10**(digits_2-1),(10**digits_2)-1)
+            instructions=str(a)+" * "+str(b)
+            res.append(instructions)
+        if str(operation) in "2":
+            digits_1=random.randint(2,4)
+            digits_2=random.randint(2,digits_1)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(max(10**(digits_2-1),1),min((10**digits_2)-1,a))
+            instructions=str(a)+" / "+str(b)
+            res.append(instructions)
+        if operation==3:
+            digits_1=random.randint(2,4)
+            digits_2=random.randint(2,4)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            instructions=str(a)+" + "+str(b)
+            res.append(instructions)
+        if operation==4:
+            digits_1=random.randint(2,4)
+            digits_2=random.randint(2,digits_1)
+            a=random.randint(10**(digits_1-1),(10**digits_1)-1)
+            b=random.randint(max(10**(digits_2-1),1),min((10**digits_2)-1,a))
+            instructions=str(a)+" - "+str(b)
+            res.append(instructions)
+    return res
+eval_set=get_eval_set(500)
+
+import math
+def to_ans(s):#gets final answer from model
+    number_1=""
+    i=0
+    while s[i]!=" ":
+        number_1+=s[i]
+        i+=1
+    symbol=s[i+1]
+    is_div=False
+    if s[i+1]=="/":
+        is_div=True
+    i+=3
+    number_2=""
+    while i<len(s):
+        number_2+=s[i]
+        i+=1
+    res=space(str(math.floor(eval(s))))
+    if is_div:
+        res+=" remainder "+space(str(int(number_1)%int(number_2)))
+    return res
+def eval_model(model_path,eval_set):#evaluates model
+    model,tokenizer=load_model_tokenizer_for_generate(model_path)
+    correct=0
+    incorrect=0
+    num_checked=0
+    sym2idx={"+":0,"-":1,"*":2,"/":3}
+    for instruction in eval_set[200:]:
+        response = generate_response(instruction, model=model, tokenizer=tokenizer)
+        it=len(response)-1
+        while response[it]!="=":
+            it-=1
+        response_num=response[it+2:len(response)]
+        if response_num==to_ans(instruction):
+            correct+=1
+        else:
+            incorrect+=1
+            symbol=""
+            i=0
+            while instruction[i] not in "+-*/":
+                i+=1
+            symbol=instruction[i]
+            i=0
+            number=""
+            while instruction[i]!=" ":
+                number+=instruction[i]
+                i+=1
+        if num_checked%5==4:
+            print("Correct:",correct)
+            print("Incorrect:",incorrect)
+        num_checked+=1
+    print("Model Path:",model_path)
+eval_model("",eval_set)#put model path in empty string

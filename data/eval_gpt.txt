@@ -1,0 +1,97 @@
+import json
+data_file=""
+f=open(data_file)
+data=json.load(f)#data must be in form {"question":question,"answer":answer}
+
+import openai
+
+class ChatBot:
+    def __init__(self, system=""):
+        self.system = system
+        self.messages = []
+        if self.system:
+            self.messages.append({"role": "system", "content": system})
+    
+    def __call__(self, message):
+        self.messages=[]
+        self.messages.append({"role": "user", "content": message})
+        result = self.execute()
+        self.messages.append({"role": "assistant", "content": result})
+        #print(self.messages)
+        return result
+    
+    def execute(self):
+        completion = openai.ChatCompletion.create(model="gpt-4", messages=self.messages)
+        # Uncomment this to print out token usage each time, e.g.
+        # {"completion_tokens": 86, "prompt_tokens": 26, "total_tokens": 112}
+        # print(completion.usage)
+        return completion.choices[0].message.content
+    
+openai.api_key=""#API key here
+verifier=ChatBot()
+
+correct=0
+incorrect=0
+i=0
+it=0
+while it<500:#evaluates ChatGPT
+    try:
+        q=data[i]["question"]
+        a=data[i]["answer"]
+        a_rem=to_ans(q)[1]
+        if a_rem:
+            a+="remainder"+a_rem
+        res_a=a
+        response=verifier(q+"Use remainders instead of decimals.")
+        j=len(response)-1
+        res_model=""
+        if "remainder" in a and "remainder 0" not in a:
+            model_res=""
+            model_res_rem=""
+            while j>=0:
+                if model_res and response[j] not in "0123456789,":
+                    break
+                if response[j] in "0123456789":
+                    num=""
+                    while response[j] in "0123456789,":
+                        num=response[j]+num
+                        j-=1
+                    if not model_res_rem:
+                        model_res_rem=num
+                    elif not model_res:
+                        model_res=num
+                j-=1
+            model_res=model_res.replace(",","")
+            model_res_rem=model_res_rem.replace(",","")
+            res_model=model_res+"remainder"+model_res_rem
+        else:
+            model_res=""
+            while j>=0:
+                if model_res and response[j] not in "0123456789,":
+                    break
+                if response[j] in "0123456789":
+                    num=""
+                    while response[j] in "0123456789,":
+                        num=response[j]+num
+                        j-=1
+                    if not model_res:
+                        model_res=num
+                j-=1
+            model_res=model_res.replace(",","")
+            res_model=model_res
+        res_model=res_model.replace(" ","")
+        res_a=res_a.replace(" ","")
+        if res_a==res_model:
+            correct+=1
+        else:
+            incorrect+=1
+            print("Question: ",q)
+            print("Answer: ",res_model)
+            print("Correct answer: ",res_a)
+        if it%5==4:
+            print("Correct",correct)
+            print("Incorrect",incorrect)
+        i+=1
+        it+=1
+    except:
+        i+=1

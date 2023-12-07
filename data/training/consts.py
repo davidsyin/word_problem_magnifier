@@ -8,7 +8,7 @@ SUGGESTED_INPUT_MODELS = [
     "databricks/dolly-v2-7b",
     "databricks/dolly-v2-12b"
 ]
-DEFAULT_TRAINING_DATASET = "/home/mcwave/data/python/code-train-v3" #"/home/mcwave/data/multiplication_data" #"/home/mcwave/data/scheduling_data"
+DEFAULT_TRAINING_DATASET = "" #training dataset here
 INTRO_BLURB = (
     "Below is an instruction that describes a task. Write a response that appropriately completes the request."
 )
@@ -64,16 +64,15 @@ PROMPT_WITH_INPUT_FORMAT = """{intro}
 
 # This is the prompt that is used for generating responses using an already trained model.  It ends with the response
 # key, where the job of the model is to provide the completion that follows it (i.e. the response itself).
-# PROMPT_FOR_GENERATION_FORMAT = """{intro}
+PROMPT_FOR_GENERATION_FORMAT = """{intro}
 
-# {instruction_key}
-# {instruction}
+{instruction_key}
+{instruction}
 
-# {response_key}
-# """.format(
-#     intro=INTRO_BLURB,
-#     instruction_key=INSTRUCTION_KEY,
-#     instruction="{instruction}",
-#     response_key=RESPONSE_KEY,
-# )
-PROMPT_FOR_GENERATION_FORMAT = "{instruction}"
+{response_key}
+""".format(
+    intro=INTRO_BLURB,
+    instruction_key=INSTRUCTION_KEY,
+    instruction="{instruction}",
+    response_key=RESPONSE_KEY,
+)

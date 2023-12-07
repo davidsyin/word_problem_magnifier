@@ -115,6 +115,7 @@ class InstructionTextGenerationPipeline(Pipeline):
         return preprocess_params, forward_params, postprocess_params
 
     def preprocess(self, instruction_text, **generate_kwargs):
+        print("preprocess",instruction_text)
         prompt_text = PROMPT_FOR_GENERATION_FORMAT.format(instruction=instruction_text)
         inputs = self.tokenizer(
             prompt_text,
@@ -125,7 +126,7 @@ class InstructionTextGenerationPipeline(Pipeline):
         return inputs
 
     def _forward(self, model_inputs, **generate_kwargs):
-        #print("forward")
+        print("forward",model_inputs)
         input_ids = model_inputs["input_ids"]
         attention_mask = model_inputs.get("attention_mask", None)
         #print(attention_mask,attention_mask.shape)
@@ -151,10 +152,11 @@ class InstructionTextGenerationPipeline(Pipeline):
             generated_sequence = tf.reshape(generated_sequence, (in_b, out_b // in_b, *generated_sequence.shape[1:]))
 
         instruction_text = model_inputs.pop("instruction_text")
+        print("output", generated_sequence)
         return {"generated_sequence": generated_sequence, "input_ids": input_ids, "instruction_text": instruction_text}
 
     def postprocess(self, model_outputs, response_key_token_id, end_key_token_id, return_full_text: bool = False):
-
+        print("postprocess")
         generated_sequence = model_outputs["generated_sequence"][0]
         instruction_text = model_outputs["instruction_text"]
 
